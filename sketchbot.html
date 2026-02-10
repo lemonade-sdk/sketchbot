@@ -959,12 +959,8 @@ async function retryAllFailed() {
 // Pre-generate prompt + welcome text + TTS audio in background (called during model loading)
 async function prefetchPromptAndWelcome() {
     try {
-        // 1. Pick prompt (first game always uses same thing)
-        if (state.previousPrompts.length === 0) {
-            state.prompt = 'a ghost with umbrella';
-        } else {
-            state.prompt = await generatePrompt();
-        }
+        // 1. Generate prompt
+        state.prompt = await generatePrompt();
         state.previousPrompts.push(state.prompt);
 
         // 2. Hardcoded welcome message
