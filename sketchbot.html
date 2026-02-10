@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SketchBot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ======== Variables — Scratchpad Theme ======== */
+        :root {
+            --bg: #faf8f4;
+            --bg-card: #ffffff;
+            --bg-input: #f0ede6;
+            --bg-hover: #e8e4dc;
+            --border: #c8c0b4;
+            --border-strong: #222;
+            --text: #1a1a1a;
+            --text2: #555;
+            --text3: #888;
+            --yellow: #f5c518;
+            --orange: #e8702a;
+            --pink: #d94c8e;
+            --purple: #7c3aed;
+            --blue: #2563eb;
+            --green: #16a34a;
+            --red: #dc2626;
+            --teal: #0d9488;
+            --ink: #222;
+        }
+
+        /* ======== Global ======== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow: hidden;
+            font-size: 17px;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow-y: auto;
+        }
+        .screen.active { display: flex; }
+        h1, h2, h3 { font-family: 'Caveat', cursive; font-weight: 700; }
+        .page-title {
+            font-family: 'Caveat', cursive; font-size: 2rem; font-weight: 700;
+            color: var(--ink); text-align: center; padding: 0.6rem 0 0.2rem;
+        }
+        .btn {
+            border: 2px solid var(--ink); border-radius: 24px; padding: 0.7rem 1.6rem; font-size: 1.1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+            background: var(--bg-card); color: var(--ink);
+        }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-primary {
+            background: var(--blue); color: #fff; border-color: var(--blue);
+        }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.03); box-shadow: 2px 3px 0 var(--ink); }
+        .btn-secondary {
+            background: var(--bg-card); border: 2px solid var(--border); color: var(--text);
+        }
+        .btn-secondary:hover { border-color: var(--ink); }
+        .btn-green {
+            background: var(--green); color: #fff; border-color: var(--green);
+        }
+        .btn-green:hover:not(:disabled) { transform: scale(1.03); box-shadow: 2px 3px 0 var(--ink); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* ======== Setup Screen ======== */
+        .setup-wrap {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 0.8rem 0.8rem 1.2rem; gap: 0.5rem; flex: 1; overflow-y: auto;
+        }
+        .setup-status {
+            font-size: 1rem; color: var(--text); text-align: center; min-height: 1.2rem;
+        }
+        .setup-models {
+            width: 100%; max-width: 480px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;
+        }
+        .model-row {
+            display: flex; flex-direction: column; gap: 0.2rem; padding: 0.5rem 0.55rem;
+            background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 6px;
+        }
+        .model-row .mr-top { display: flex; align-items: center; gap: 0.3rem; }
+        .model-row .icon { width: 16px; text-align: center; flex-shrink: 0; font-size: 0.9rem; }
+        .model-row .role {
+            font-size: 0.7rem; font-weight: 500; color: #fff; flex-shrink: 0;
+            background: var(--blue); padding: 0.08rem 0.35rem; border-radius: 3px;
+            text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.3;
+        }
+        .model-row .size { font-size: 0.85rem; color: var(--text); flex-shrink: 0; margin-left: auto; }
+        .model-row .name {
+            font-size: 1.05rem; font-weight: 400; color: var(--ink); line-height: 1.25;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .model-row .spinner {
+            width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--blue);
+            border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+        }
+        .model-row .check { color: var(--green); font-size: 0.9rem; }
+        .retry-btn {
+            padding: 0.2rem 0.5rem; font-size: 0.8rem;
+            background: var(--red); color: #fff; border: none; border-radius: 3px; cursor: pointer;
+            font-family: 'DM Sans', sans-serif; align-self: flex-start;
+        }
+        .retry-btn:hover { opacity: 0.85; }
+        .model-row .progress-bar-wrap {
+            width: 100%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+        }
+        .model-row .progress-bar-fill {
+            height: 100%; background: var(--blue);
+            border-radius: 2px; transition: width 0.3s;
+        }
+        .model-row .progress-text { font-size: 0.8rem; color: var(--text2); }
+        .setup-actions { display: flex; gap: 0.6rem; margin-top: 0.3rem; }
+        .setup-warning {
+            font-size: 0.9rem; color: var(--orange); text-align: center; max-width: 400px;
+            background: #fff5eb; border: 1.5px solid var(--orange);
+            border-radius: 8px; padding: 0.5rem 0.7rem; line-height: 1.4;
+        }
+        .setup-warning code {
+            background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;
+            font-size: 0.8rem; color: var(--blue);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ======== Prompt Screen ======== */
+        .prompt-wrap {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 1rem 1rem 1.5rem; gap: 1rem; flex: 1; overflow-y: auto;
+        }
+        .prompt-narrator {
+            font-size: 1.05rem; color: var(--text2); font-style: italic; text-align: center;
+            min-height: 1.2rem; max-width: 380px; line-height: 1.4;
+        }
+        .prompt-label { font-size: 1.05rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.1em; }
+        .prompt-display {
+            font-family: 'Caveat', cursive; font-size: 1.8rem; font-weight: 700; text-align: center;
+            padding: 0.5rem 1rem; background: var(--bg-card); border: 2.5px solid var(--ink);
+            border-radius: 4px; min-height: 48px; display: flex; align-items: center; justify-content: center;
+            width: 100%; max-width: 300px;
+            box-shadow: 3px 3px 0 var(--ink);
+        }
+        .prompt-display.loading { color: var(--text3); font-size: 1rem; font-weight: 400; }
+        .prompt-actions { display: flex; gap: 0.6rem; margin-top: 3px; }
+
+        /* ======== Pipeline Visualization ======== */
+        .pipeline {
+            width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0;
+            margin-top: 10px;
+        }
+        .pipe-group {
+            background: var(--bg-card); border: 1.5px solid var(--border);
+            border-radius: 8px; padding: 0.4rem 0.6rem;
+            display: flex; align-items: baseline; gap: 0.3rem; flex-wrap: wrap;
+        }
+        .pipe-fade {
+            opacity: 0; animation: pipeFadeIn 0.4s ease forwards;
+            min-width: 0;
+        }
+        .pipe-group-title {
+            font-size: 0.95rem; font-weight: 600; color: var(--ink); white-space: nowrap;
+        }
+        .pipe-subs {
+            display: flex; gap: 0.2rem; flex-wrap: wrap; flex: 1; justify-content: flex-end;
+        }
+        .pipe-sub {
+            font-size: 0.85rem; color: var(--text2); background: var(--bg-input);
+            padding: 0.1rem 0.4rem; border-radius: 4px; white-space: nowrap;
+        }
+        .pipe-line { width: 2px; height: 6px; background: var(--border); }
+        .pipe-row {
+            display: flex; width: 100%; align-items: center; gap: 0;
+        }
+        .pipe-row .pipe-group { flex: 1; max-width: 44%; }
+        .pipe-row-conn {
+            width: 12%; height: 2px; background: var(--border); flex-shrink: 0;
+        }
+        .pipe-diag {
+            width: 100%; height: 16px; display: block;
+        }
+        .pipe-diag line {
+            stroke: var(--border); stroke-width: 2;
+        }
+
+        /* ======== Drawing Screen ======== */
+        .draw-wrap { display: flex; flex-direction: column; height: 100%; }
+        .draw-header {
+            padding: 0.4rem 0.8rem; background: var(--bg-card); border-bottom: 2px solid var(--border);
+            text-align: center; flex-shrink: 0;
+        }
+        .draw-prompt-text {
+            font-size: 1.05rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.1em;
+        }
+        .draw-narrator {
+            font-size: 0.95rem; color: var(--text2); font-style: italic; min-height: 1rem; margin-top: 0.2rem;
+        }
+        .canvas-area {
+            flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.5rem;
+            overflow: hidden; background: var(--bg-input);
+        }
+        #drawCanvas {
+            background: #ffffff; border-radius: 2px; touch-action: none; cursor: crosshair;
+            max-width: 100%; max-height: 100%; border: 2px solid var(--ink);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+        }
+        .draw-toolbar {
+            display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.6rem;
+            background: var(--bg-card); border-top: 2px solid var(--border); flex-shrink: 0;
+            flex-wrap: wrap; justify-content: center;
+        }
+        .color-btn {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink);
+            cursor: pointer; transition: transform 0.15s; flex-shrink: 0;
+        }
+        .color-btn.active { transform: scale(1.05); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--ink); }
+        .color-btn.eraser {
+            background: #fff !important; display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; color: #333;
+        }
+        .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.2rem; }
+
+        /* ======== Gameplay Screen ======== */
+        .game-wrap { display: flex; flex-direction: column; height: 100%; }
+        .game-header {
+            padding: 0.5rem 0.8rem; background: var(--bg-card); border-bottom: 2px solid var(--ink);
+            display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+        }
+        .game-header .game-title { flex: 1; font-size: 1rem; color: var(--text); }
+        .game-header .game-title strong { color: var(--red); }
+        .mute-btn {
+            background: none; border: 1.5px solid var(--border); border-radius: 6px;
+            padding: 0.3rem 0.5rem; font-size: 0.9rem; cursor: pointer; color: var(--text);
+        }
+        .mute-btn.muted { opacity: 0.4; }
+        .game-narrator {
+            padding: 0.4rem 0.8rem; font-size: 1rem; color: var(--text2); font-style: italic;
+            text-align: center; background: var(--bg-input); min-height: 1.4rem; flex-shrink: 0;
+        }
+        .turns-wrap {
+            flex: 1; overflow-y: auto; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem;
+        }
+        .turn-card {
+            background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 8px;
+            padding: 0.6rem; animation: fadeSlideIn 0.4s ease-out; display: flex; flex-direction: column;
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .turn-head {
+            display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;
+        }
+        .turn-icon { font-size: 1rem; }
+        .turn-role { font-size: 1.1rem; font-weight: 600; }
+        .turn-model-name { font-size: 0.9rem; color: var(--text2); }
+        .turn-image {
+            width: 100%; aspect-ratio: 1; border-radius: 4px; overflow: hidden;
+            background: var(--bg-input); display: flex; align-items: center; justify-content: center;
+            border: 1.5px solid var(--border);
+        }
+        .turn-image img { width: 100%; height: 100%; object-fit: contain; }
+        .turn-guess {
+            display: inline-block; margin-top: 0.4rem; padding: 0.3rem 0.6rem; background: var(--bg-input);
+            border-radius: 6px; font-size: 1.05rem; line-height: 1.4;
+        }
+        .turn-guess .guess-text { font-weight: 600; }
+        .turn-guess .guess-label { font-size: 0.9rem; color: var(--text2); margin-bottom: 0.15rem; }
+        .turn-enhanced {
+            margin-top: 0.3rem; font-size: 0.85rem; color: var(--text2); font-style: italic;
+        }
+        .turn-score {
+            flex-shrink: 0; margin-left: auto; font-size: 1.6rem; font-weight: 700;
+        }
+        .turn-score.high { color: var(--green); }
+        .turn-score.mid { color: #a08600; }
+        .turn-score.low { color: var(--red); }
+        .turn-card-row {
+            display: flex; align-items: center; gap: 0.5rem; width: 100%;
+        }
+        .turn-card-body { flex: 1; min-width: 0; }
+        .turn-status {
+            padding: 0.8rem; text-align: center; color: var(--text2); font-size: 1rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* ======== Score Banner (inline in gameplay) ======== */
+        .score-banner {
+            text-align: center; padding: 0.8rem 1.2rem; border-radius: 8px;
+            border: 2.5px solid var(--ink); width: 100%;
+            background: var(--bg-card);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.12);
+            align-self: center;
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pipeFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .score-banner.great { border-color: var(--green); }
+        .score-banner.ok { border-color: var(--orange); }
+        .score-banner.bad { border-color: var(--red); }
+        .score-banner h2 { font-size: 2rem; margin-bottom: 0.2rem; }
+        .score-banner.great h2 { color: var(--green); }
+        .score-banner.ok h2 { color: var(--orange); }
+        .score-banner.bad h2 { color: var(--red); }
+        .score-banner .score-transform { font-size: 1rem; color: var(--text); margin-bottom: 0.3rem; }
+        .score-banner .score-commentary { font-size: 1rem; color: var(--text2); font-style: italic; line-height: 1.4; }
+        /* ======== Help Popup ======== */
+        .popup-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;
+            z-index: 300; padding: 1rem;
+        }
+        .popup {
+            background: var(--bg-card); border: 2.5px solid var(--ink); border-radius: 8px;
+            padding: 1.5rem; max-width: 400px; width: 100%;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.15); animation: popIn 0.3s ease-out;
+        }
+        .popup h3 { font-size: 1.3rem; color: var(--ink); margin-bottom: 0.8rem; }
+        .popup ol { padding-left: 1.2rem; color: var(--text); font-size: 1rem; line-height: 1.6; }
+        .popup li { margin-bottom: 0.4rem; }
+        .popup code {
+            background: var(--bg-input); padding: 0.15rem 0.35rem; border-radius: 3px;
+            font-family: monospace; font-size: 0.85rem; color: var(--blue);
+        }
+        .popup a { color: var(--blue); text-decoration: underline; }
+        .popup a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN ============ -->
+<div id="screen-setup" class="screen active">
+    <div class="setup-wrap">
+        <div class="page-title">SketchBot</div>
+        <div class="setup-status" id="setupStatus">Connecting to Lemonade Server...</div>
+        <div class="setup-models" id="setupModels"></div>
+        <div id="setupWarning"></div>
+        <div class="setup-actions" id="setupActions"></div>
+    </div>
+</div>
+
+<!-- ============ PROMPT SCREEN ============ -->
+<div id="screen-prompt" class="screen">
+    <div class="prompt-wrap">
+        <div class="page-title" style="padding:0;font-size:1.4rem">SketchBot</div>
+        <div class="prompt-narrator" id="promptNarrator" style="display:none"></div>
+        <div class="prompt-label">Your challenge</div>
+        <div class="prompt-display" id="promptDisplay"><span class="loading">Generating prompt...</span></div>
+        <div class="pipeline" id="promptPipeline"></div>
+        <div class="prompt-actions">
+            <button class="btn btn-secondary" id="rerollBtn" onclick="rerollPrompt()">Re-roll prompt</button>
+            <button class="btn btn-green" id="startDrawBtn" onclick="goToDrawing()">Start Drawing!</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ DRAWING SCREEN ============ -->
+<div id="screen-draw" class="screen">
+    <div class="draw-wrap">
+        <div class="draw-header">
+            <div class="page-title" style="padding:0;font-size:1.4rem">SketchBot</div>
+            <div class="draw-prompt-text" id="drawPromptText">draw: ...</div>
+            <div class="draw-narrator" id="drawNarrator"></div>
+        </div>
+        <div class="canvas-area">
+            <canvas id="drawCanvas" width="512" height="512"></canvas>
+        </div>
+        <div class="draw-toolbar">
+            <button class="color-btn active" data-color="#000000" style="background:#000" onclick="setColor(this)"></button>
+            <button class="color-btn" data-color="#ef4444" style="background:#ef4444" onclick="setColor(this)"></button>
+            <button class="color-btn" data-color="#3b82f6" style="background:#3b82f6" onclick="setColor(this)"></button>
+            <button class="color-btn" data-color="#22c55e" style="background:#22c55e" onclick="setColor(this)"></button>
+            <button class="color-btn" data-color="#a855f7" style="background:#a855f7" onclick="setColor(this)"></button>
+            <button class="color-btn" data-color="#f97316" style="background:#f97316" onclick="setColor(this)"></button>
+            <button class="color-btn eraser" data-color="#ffffff" onclick="setColor(this)">&#9003;</button>
+            <div class="toolbar-sep"></div>
+            <button class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.95rem" onclick="clearCanvas()">Clear</button>
+            <button class="btn btn-green" style="padding:0.4rem 1rem;font-size:1rem" onclick="submitDrawing()">Done!</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ GAMEPLAY SCREEN ============ -->
+<div id="screen-game" class="screen">
+    <div class="game-wrap">
+        <div class="game-header" style="justify-content:center">
+            <div class="page-title" style="padding:0;font-size:1.4rem;text-align:center">SketchBot</div>
+        </div>
+        <div class="game-narrator" id="gameNarrator" style="display:none"></div>
+        <div class="turns-wrap" id="turnsWrap"></div>
+    </div>
+</div>
+
+<!-- Score screen removed — finale is now inline in gameplay -->
+
+<!-- ============ HELP POPUP ============ -->
+<div class="popup-overlay" id="helpPopup" style="display:none">
+    <div class="popup">
+        <h3>Setup Instructions</h3>
+        <ol>
+            <li>Download <strong>Lemonade Server</strong> from <a href="https://lemonade-server.ai" target="_blank">lemonade-server.ai</a></li>
+            <li>Run the installer</li>
+            <li>Start the server with multi-model support:<br>
+                <code id="helpCmd">lemonade-server serve --max-loaded-models 5</code></li>
+            <li>Reload this page!</li>
+        </ol>
+        <button class="btn btn-green" style="width:100%;margin-top:1rem" onclick="document.getElementById('helpPopup').style.display='none'">Got it!</button>
+    </div>
+</div>
+
+<script>
+// ================================================================
+// CONFIGURATION
+// ================================================================
+const SERVER = 'http://localhost:8000';
+
+// Model roles
+const MODELS = {
+    announcer: 'LFM2.5-1.2B-Instruct-GGUF',
+    judge: 'granite-4.0-h-tiny-GGUF',
+    tts: 'kokoro-v1',
+    guessers: ['Qwen3-VL-4B-Instruct-GGUF', 'Gemma-3-4b-it-GGUF', 'Qwen2.5-VL-3B-Instruct-GGUF'],
+    drawers: ['SD-Turbo', 'SDXL-Turbo'],
+};
+
+// ================================================================
+// STATE
+// ================================================================
+const state = {
+    maxModelSlots: 1,
+    playerCount: 5,
+    prompt: '',
+    previousPrompts: [],
+    muted: false,
+    // Prefetch pipeline (start generating prompt/welcome/TTS during model loading)
+    prefetchPromise: null,    // resolves when prompt + welcome + audio are ready
+    prefetchedAudio: null,    // pre-generated Audio object for welcome
+    prefetchedWelcome: '',    // pre-generated welcome text
+    // Canvas
+    drawing: false,
+    canvasColor: '#000000',
+    canvasBrushSize: 8,
+    // Game
+    humanImage: null,   // base64 data URL
+    turns: [],          // { type, model, role, image, guess, enhancedPrompt, score }
+    gameRunning: false,
+    // Models status
+    modelsInfo: {},     // { id: { downloaded, size, ... } }
+    loadedModels: new Set(),
+    failedModels: new Set(),
+    downloadProgress: {},
+};
+
+// ================================================================
+// UTILITY
+// ================================================================
+function $(id) { return document.getElementById(id); }
+function show(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(screenId).classList.add('active');
+}
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+async function scoreGuess(original, guess) {
+    // Use the judge LLM (larger model) to score how close the guess is to the original
+    try {
+        const resp = await chatCompletion(MODELS.judge, [
+            { role: 'system', content: `Score a drawing guessing game. Did the AI correctly identify what was drawn?
+
+The MOST IMPORTANT thing is whether the guess names the same core object/animal/person. Modifiers (size, color, action, style) matter much less.
+
+Reply with ONLY a number 1-99.
+
+90-99: exact or near-exact (cat=cat, big bird=large bird)
+70-89: correct subject, wrong details (pizza with legs=pizza on a plate, cowboy on horse=man on horse)
+50-69: correct subject, extra stuff wrong (pizza with legs=multiple pizzas, angry cat=sleeping cat)
+30-49: related but different subject (cat=dog, pizza=sandwich)
+10-29: wrong subject, vague connection (cowboy on horse=mountain scene, pizza=round plate)
+1-9: totally unrelated (cat=airplane)` },
+            { role: 'user', content: '"cat" vs "kitten"' },
+            { role: 'assistant', content: '92' },
+            { role: 'user', content: '"pizza with legs" vs "pizza on a stand"' },
+            { role: 'assistant', content: '72' },
+            { role: 'user', content: '"pizza with legs" vs "multiple pizzas"' },
+            { role: 'assistant', content: '55' },
+            { role: 'user', content: '"cowboy on horse" vs "man on horse"' },
+            { role: 'assistant', content: '75' },
+            { role: 'user', content: '"cowboy on horse" vs "mountain landscape"' },
+            { role: 'assistant', content: '12' },
+            { role: 'user', content: '"vampire bat" vs "bat"' },
+            { role: 'assistant', content: '85' },
+            { role: 'user', content: '"cat" vs "dog"' },
+            { role: 'assistant', content: '35' },
+            { role: 'user', content: '"cat" vs "airplane"' },
+            { role: 'assistant', content: '3' },
+            { role: 'user', content: `"${original}" vs "${guess}"` }
+        ], { maxTokens: 5, temperature: 0.1 });
+        const num = parseInt(resp.replace(/\D/g, ''));
+        if (!isNaN(num) && num >= 0 && num <= 100) {
+            return Math.min(99, Math.max(1, num));
+        }
+    } catch (e) { console.warn('LLM scoring failed:', e); }
+    return 50; // fallback
+}
+
+function scoreClass(pct) {
+    if (pct >= 65) return 'high';
+    if (pct >= 35) return 'mid';
+    return 'low';
+}
+
+// Get the actual models needed for a given player count
+function getRequiredModels(count) {
+    const numGuessers = Math.ceil(count / 2) + (count > 1 ? 0 : 0);
+    // 1 player: 1 guesser, 0 drawers
+    // 3 players: 2 guessers, 1 drawer
+    // 5 players: 3 guessers, 2 drawers
+    const nGuessers = count === 1 ? 1 : count === 3 ? 2 : 3;
+    const nDrawers = count === 1 ? 0 : count === 3 ? 1 : 2;
+
+    const guessers = MODELS.guessers.slice(0, nGuessers);
+    const drawers = MODELS.drawers.slice(0, nDrawers);
+
+    const all = [MODELS.announcer, MODELS.judge];
+    all.push(...guessers, ...drawers, MODELS.tts);
+    return { guessers, drawers, all, nGuessers, nDrawers };
+}
+
+function getNeededMaxModels(count) {
+    // --max-loaded-models N sets the same limit for every type slot
+    // The bottleneck is LLM: announcer + VLMs
+    const { nGuessers, nDrawers } = getRequiredModels(count);
+    const llm = 1 + nGuessers;
+    // Image = nDrawers, Reranking = 1, Audio = 1 — all <= llm
+    return llm;
+}
+
+// ================================================================
+// SERVER API
+// ================================================================
+async function apiGet(path) {
+    console.log(`[API] GET ${path}`);
+    const t0 = performance.now();
+    const r = await fetch(`${SERVER}${path}`);
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const data = await r.json();
+    console.log(`[API] GET ${path} done in ${((performance.now() - t0) / 1000).toFixed(2)}s`);
+    return data;
+}
+
+async function apiPost(path, body) {
+    const prompt = body.prompt || body.input || body.query || body.model_name || body.messages?.slice(-1)[0]?.content || '';
+    const model = body.model || body.model_name || '';
+    console.log(`[API] POST ${path}`, model ? `model=${model}` : '', prompt ? `prompt=${typeof prompt === 'string' ? prompt.slice(0, 80) : '[object]'}` : '');
+    const t0 = performance.now();
+    const r = await fetch(`${SERVER}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const data = await r.json();
+    console.log(`[API] POST ${path} done in ${((performance.now() - t0) / 1000).toFixed(2)}s`);
+    return data;
+}
+
+async function checkHealth() {
+    const d = await apiGet('/api/v1/health');
+    state.maxModelSlots = d.max_models?.llm ?? 1; // single N applies to all type slots
+    const loaded = d.all_models_loaded || [];
+    loaded.forEach(m => state.loadedModels.add(m.model_name));
+    return d;
+}
+
+async function checkSystemInfo() {
+    return apiGet('/api/v1/system-info');
+}
+
+async function fetchModelsInfo() {
+    const d = await apiGet('/api/v1/models?show_all=true');
+    (d.data || []).forEach(m => { state.modelsInfo[m.id] = m; });
+}
+
+async function pullModel(modelId, onProgress) {
+    console.log(`[API] POST /api/v1/pull`, `model=${modelId}`);
+    const t0 = performance.now();
+    const r = await fetch(`${SERVER}/api/v1/pull`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_name: modelId, stream: true }),
+    });
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const line of dec.decode(value).split('\n')) {
+            if (line.startsWith('data: ')) {
+                try { const d = JSON.parse(line.slice(6)); if (onProgress) onProgress(d); } catch {}
+            }
+        }
+    }
+    console.log(`[API] POST /api/v1/pull model=${modelId} done in ${((performance.now() - t0) / 1000).toFixed(2)}s`);
+}
+
+async function loadModel(modelId) {
+    return apiPost('/api/v1/load', { model_name: modelId });
+}
+
+async function chatCompletion(model, messages, opts = {}) {
+    const body = { model, messages, stream: false, temperature: opts.temperature ?? 0.7, enable_thinking: false };
+    if (opts.maxTokens) body.max_tokens = opts.maxTokens;
+    const d = await apiPost('/api/v1/chat/completions', body);
+    return d.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function imageGeneration(model, prompt) {
+    const info = state.modelsInfo[model];
+    const defaults = info?.image_defaults || {};
+    const body = {
+        model, prompt,
+        size: `${defaults.width || 512}x${defaults.height || 512}`,
+        steps: defaults.steps || 4,
+        cfg_scale: defaults.cfg_scale || 1.0,
+        response_format: 'b64_json',
+    };
+    const d = await apiPost('/api/v1/images/generations', body);
+    return d.data?.[0]?.b64_json || null;
+}
+
+// Core TTS fetch — returns an Audio object (mp3). Used by all TTS paths.
+async function ttsFetch(text) {
+    // Strip special characters and emojis that TTS would read aloud
+    text = text.replace(/[*_~`#\[\](){}]/g, '').replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FEFF}]|[\u{200D}]/gu, '').replace(/\s{2,}/g, ' ').trim();
+    console.log(`[API] POST /api/v1/audio/speech`, `prompt=${text}`);
+    const t0 = performance.now();
+    const r = await fetch(`${SERVER}/api/v1/audio/speech`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'kokoro-v1', input: text, voice: 'ash', speed: 1.3, response_format: 'mp3' }),
+    });
+    if (!r.ok) throw new Error(`TTS ${r.status} ${r.statusText}`);
+    const blob = await r.blob();
+    console.log(`[API] POST /api/v1/audio/speech done in ${((performance.now() - t0) / 1000).toFixed(2)}s`);
+    return new Audio(URL.createObjectURL(blob));
+}
+
+// Play TTS immediately and wait for it to finish.
+async function textToSpeech(text) {
+    if (state.muted) return;
+    try {
+        const audio = await ttsFetch(text);
+        await audio.play();
+        await new Promise(res => { audio.onended = res; audio.onerror = res; });
+    } catch (e) {
+        console.warn('TTS error:', e);
+    }
+}
+
+// Pre-generate TTS and return Audio object (for caching / playing later).
+async function textToSpeechPrefetch(text) {
+    return await ttsFetch(text);
+}
+
+
+// ================================================================
+// SETUP SCREEN
+// ================================================================
+async function initSetup() {
+    const statusEl = $('setupStatus');
+    const modelsEl = $('setupModels');
+    const actionsEl = $('setupActions');
+    const warningEl = $('setupWarning');
+
+    statusEl.textContent = 'Connecting to Lemonade Server...';
+    modelsEl.innerHTML = '';
+    actionsEl.innerHTML = '';
+    warningEl.innerHTML = '';
+
+    // 1. Connect
+    try {
+        await checkHealth();
+    } catch {
+        statusEl.innerHTML = '<span style="color:var(--red)">Cannot connect to server at ' + SERVER + '</span>';
+        actionsEl.innerHTML = `
+            <button class="btn btn-primary" onclick="initSetup()">Retry</button>
+            <button class="btn btn-secondary" onclick="$('helpPopup').style.display='flex'">Help</button>`;
+        return;
+    }
+    statusEl.textContent = 'Connected! Checking system...';
+
+    // 2. System info
+    try { await checkSystemInfo(); } catch (e) { console.warn('System info failed:', e); }
+
+    // 3. Fetch models catalog
+    try { await fetchModelsInfo(); } catch (e) { console.warn('Models fetch failed:', e); }
+
+    // 4. Check slot requirements
+    const needed = getNeededMaxModels(5); // Check for max player count
+    const slotsOk = state.maxModelSlots >= needed;
+
+    if (!slotsOk) {
+        warningEl.innerHTML = `<div class="setup-warning">
+            Server allows ${state.maxModelSlots} model${state.maxModelSlots !== 1 ? 's' : ''} per type, but ${needed} are needed.<br>
+            Restart with: <code>lemonade-server serve --max-loaded-models ${needed}</code>
+        </div>`;
+    }
+
+    // 5. Show models list and summarize download state
+    const { all } = getRequiredModels(5);
+    const toDownload = all.filter(id => !(state.modelsInfo[id]?.downloaded));
+    renderSetupModels();
+
+    if (!slotsOk) {
+        statusEl.textContent = 'Not enough model slots — see below.';
+    } else if (toDownload.length === 0) {
+        statusEl.textContent = `All ${all.length} models downloaded. Ready to load.`;
+    } else {
+        statusEl.textContent = `${all.length - toDownload.length} of ${all.length} models downloaded. ${toDownload.length} to download.`;
+    }
+
+    const btnLabel = toDownload.length === 0 ? 'Load All' : (toDownload.length < all.length ? `Download ${toDownload.length} &amp; Load All` : 'Download &amp; Load All');
+    actionsEl.innerHTML = `
+        <button class="btn btn-primary" id="loadAllBtn" ${slotsOk ? '' : 'disabled'} onclick="downloadAndLoadAll()">${btnLabel}</button>
+        <button class="btn btn-secondary" onclick="$('helpPopup').style.display='flex'">Help</button>`;
+}
+
+function modelRole(id) {
+    if (id === MODELS.announcer) return 'LLM';
+    if (id === MODELS.judge) return 'LLM';
+    if (id === MODELS.tts) return 'TTS';
+    if (MODELS.guessers.includes(id)) return 'VLM';
+    if (MODELS.drawers.includes(id)) return 'SD';
+    return 'Util';
+}
+
+function renderSetupModels() {
+    // Full rebuild — called once at setup and when structural changes occur (load complete, error)
+    const { all } = getRequiredModels(5);
+    const modelsEl = $('setupModels');
+
+    modelsEl.innerHTML = all.map(id => {
+        const info = state.modelsInfo[id];
+        const size = info?.size ? info.size.toFixed(1) + ' GB' : '';
+        const safeId = CSS.escape(id);
+        return `<div class="model-row" id="mr-${safeId}">
+            <div class="mr-top">
+                <div class="icon" id="mi-${safeId}"></div>
+                <div class="role">${modelRole(id)}</div>
+                <div class="size">${size}</div>
+            </div>
+            <div class="name">${shortName(id)}</div>
+            <div class="model-extra" id="mx-${safeId}"></div>
+        </div>`;
+    }).join('');
+
+    // Apply current state to each row
+    all.forEach(id => updateModelRow(id));
+}
+
+function updateModelRow(id) {
+    // Targeted update — only touches icon + extra area for a single model, preserving DOM/transitions
+    const safeId = CSS.escape(id);
+    const iconEl = document.getElementById('mi-' + safeId);
+    const extraEl = document.getElementById('mx-' + safeId);
+    if (!iconEl || !extraEl) return;
+
+    const info = state.modelsInfo[id];
+    const downloaded = info?.downloaded ?? false;
+    const loaded = state.loadedModels.has(id);
+    const progress = state.downloadProgress[id];
+
+    // Icon
+    const failed = state.failedModels.has(id);
+    let icon = '';
+    if (loaded) icon = '<span class="check">✓</span>';
+    else if (progress?.status === 'downloading') icon = '<div class="spinner"></div>';
+    else if (progress?.status === 'loading') icon = '<div class="spinner"></div>';
+    else if (failed) icon = '<span style="color:var(--red);font-weight:bold">✗</span>';
+    else if (progress?.status === 'downloaded') icon = '<span style="color:var(--green)">✓</span>';
+    else if (downloaded) icon = '<span style="color:var(--green)">✓</span>';
+    else icon = '<span style="color:var(--text3)">⬇</span>';
+
+    // Only update icon if it changed (avoid resetting spinner animation)
+    const iconKey = loaded ? 'loaded' : failed ? 'failed' : (progress?.status || (downloaded ? 'downloaded' : 'pending'));
+    if (iconEl.dataset.state !== iconKey) {
+        iconEl.innerHTML = icon;
+        iconEl.dataset.state = iconKey;
+    }
+
+    // Extra (progress bar / loading text / error)
+    if (progress?.status === 'downloading') {
+        // Create progress bar if not already there, then update width smoothly
+        let bar = extraEl.querySelector('.progress-bar-fill');
+        if (!bar) {
+            extraEl.innerHTML = `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:0%"></div></div>
+                <span class="progress-text">Downloading 0%</span>`;
+            bar = extraEl.querySelector('.progress-bar-fill');
+        }
+        const pct = progress.percent || 0;
+        bar.style.width = pct + '%';
+        extraEl.querySelector('.progress-text').textContent = `Downloading ${Math.round(pct)}%`;
+    } else if (progress?.status === 'loading') {
+        if (!extraEl.querySelector('.progress-text')?.textContent?.includes('Loading')) {
+            extraEl.innerHTML = '<span class="progress-text">Loading...</span>';
+        }
+    } else if (failed) {
+        if (!extraEl.querySelector('.retry-btn')) {
+            extraEl.innerHTML = `<span class="progress-text" style="color:var(--red)">Failed to load</span>
+                <button class="retry-btn" onclick="retryModel('${id}')">Retry</button>`;
+        }
+    } else {
+        if (extraEl.innerHTML) extraEl.innerHTML = '';
+    }
+}
+
+async function downloadAndLoadAll() {
+    const btn = $('loadAllBtn');
+    if (btn) btn.disabled = true;
+
+    const { all } = getRequiredModels(5);
+
+    // Kick off prefetch early if announcer + judge + TTS are already loaded
+    if (!state.prefetchPromise
+        && state.loadedModels.has(MODELS.announcer)
+        && state.loadedModels.has(MODELS.judge)
+        && state.loadedModels.has(MODELS.tts)) {
+        state.prefetchPromise = prefetchPromptAndWelcome();
+    }
+
+    // Phase 1: Download all models in parallel
+    const toDownload = all.filter(id => !(state.modelsInfo[id]?.downloaded));
+    if (toDownload.length > 0) {
+        $('setupStatus').textContent = `Downloading ${toDownload.length} model${toDownload.length > 1 ? 's' : ''}...`;
+        toDownload.forEach(id => {
+            state.downloadProgress[id] = { percent: 0, status: 'downloading' };
+            updateModelRow(id);
+        });
+
+        await Promise.all(toDownload.map(async (id) => {
+            try {
+                await pullModel(id, (d) => {
+                    if (d.percent !== undefined) {
+                        state.downloadProgress[id] = { percent: d.percent, status: 'downloading' };
+                        updateModelRow(id);
+                    }
+                });
+                state.downloadProgress[id] = { percent: 100, status: 'downloaded' };
+            } catch (e) {
+                console.error(`Pull failed for ${id}:`, e);
+                state.failedModels.add(id);
+                delete state.downloadProgress[id];
+            }
+            updateModelRow(id);
+        }));
+    }
+
+    // Phase 2: Load models that aren't already loaded and didn't fail to download
+    const toLoad = all.filter(id => !state.failedModels.has(id) && !state.loadedModels.has(id));
+    if (toLoad.length > 0) {
+        $('setupStatus').textContent = `Loading ${toLoad.length} model${toLoad.length > 1 ? 's' : ''} into memory...`;
+        toLoad.forEach(id => {
+            state.downloadProgress[id] = { status: 'loading' };
+            updateModelRow(id);
+        });
+
+        await Promise.all(toLoad.map(async (id) => {
+            try {
+                await loadModel(id);
+                state.loadedModels.add(id);
+                state.failedModels.delete(id);
+            } catch (e) {
+                console.error(`Load failed for ${id}:`, e);
+                state.failedModels.add(id);
+            }
+            delete state.downloadProgress[id];
+            updateModelRow(id);
+
+            // As soon as announcer + judge + TTS are loaded, start prefetching prompt & welcome
+            if (!state.prefetchPromise
+                && state.loadedModels.has(MODELS.announcer)
+                && state.loadedModels.has(MODELS.judge)
+                && state.loadedModels.has(MODELS.tts)) {
+                state.prefetchPromise = prefetchPromptAndWelcome();
+            }
+        }));
+    }
+
+    showSetupResult();
+}
+
+function showSetupResult() {
+    const { all } = getRequiredModels(5);
+    const errCount = all.filter(id => state.failedModels.has(id)).length;
+    const actionsEl = $('setupActions');
+
+    if (errCount) {
+        $('setupStatus').textContent = `${all.length - errCount} of ${all.length} models ready, ${errCount} failed.`;
+        actionsEl.innerHTML = `
+            <button class="btn btn-primary" onclick="retryAllFailed()">Retry Failed</button>
+            <button class="btn btn-secondary" onclick="$('helpPopup').style.display='flex'">Help</button>`;
+    } else {
+        $('setupStatus').textContent = `All ${all.length} models ready!`;
+        setTimeout(() => goToPrompt(), 600);
+    }
+}
+
+async function retryModel(id) {
+    state.failedModels.delete(id);
+    state.downloadProgress[id] = { status: 'loading' };
+    updateModelRow(id);
+    $('setupStatus').textContent = `Retrying ${id}...`;
+
+    try {
+        // Re-download if needed
+        if (!(state.modelsInfo[id]?.downloaded)) {
+            state.downloadProgress[id] = { percent: 0, status: 'downloading' };
+            updateModelRow(id);
+            await pullModel(id, (d) => {
+                if (d.percent !== undefined) {
+                    state.downloadProgress[id] = { percent: d.percent, status: 'downloading' };
+                    updateModelRow(id);
+                }
+            });
+        }
+        state.downloadProgress[id] = { status: 'loading' };
+        updateModelRow(id);
+        await loadModel(id);
+        state.loadedModels.add(id);
+    } catch (e) {
+        console.error(`Retry failed for ${id}:`, e);
+        state.failedModels.add(id);
+    }
+    delete state.downloadProgress[id];
+    updateModelRow(id);
+    showSetupResult();
+}
+
+async function retryAllFailed() {
+    const failed = [...state.failedModels];
+    for (const id of failed) {
+        await retryModel(id);
+        if (state.failedModels.size === 0) break;
+    }
+}
+
+// ================================================================
+// PROMPT SCREEN
+// ================================================================
+// Pre-generate prompt + welcome text + TTS audio in background (called during model loading)
+async function prefetchPromptAndWelcome() {
+    try {
+        // 1. Pick prompt (first game always uses same thing)
+        if (state.previousPrompts.length === 0) {
+            state.prompt = 'a ghost with umbrella';
+        } else {
+            state.prompt = await generatePrompt();
+        }
+        state.previousPrompts.push(state.prompt);
+
+        // 2. Hardcoded welcome message
+        const welcome = `Try drawing ${state.prompt} and let's see how badly these AIs can mess it up.`;
+
+        // 3. Pre-generate TTS audio for caching (played later on prompt screen)
+        if (!state.muted) {
+            try {
+                state.prefetchedAudio = await textToSpeechPrefetch(welcome);
+            } catch (e) { console.warn('Prefetch TTS failed:', e); }
+        }
+        state.prefetchedWelcome = welcome;
+    } catch (e) {
+        console.warn('Prefetch failed, will generate on demand:', e);
+    }
+}
+
+async function goToPrompt() {
+    show('screen-prompt');
+    const display = $('promptDisplay');
+
+    // Wait for prefetch if it's running, or generate on demand
+    if (state.prefetchPromise) {
+        if (!state.prompt) {
+            display.innerHTML = '<span style="color:var(--text3);font-size:0.9rem">Generating prompt...</span>';
+            display.classList.add('loading');
+        }
+        await state.prefetchPromise;
+    }
+
+    if (!state.prompt) {
+        // Prefetch wasn't started or failed — generate now
+        await generatePromptFresh();
+    }
+
+    display.classList.remove('loading');
+    display.textContent = state.prompt;
+    renderPipeline($('promptPipeline'));
+
+    // Show welcome text and play audio
+    if (state.prefetchedWelcome) {
+        $('promptNarrator').textContent = state.prefetchedWelcome;
+    }
+    if (state.prefetchedAudio) {
+        state.prefetchedAudio.play().catch(() => {});
+        state.prefetchedAudio = null;
+    }
+}
+
+// Fallback prompts in case LLM generation fails
+const PROMPT_FALLBACKS = [
+    'angry cat', 'pirate ship', 'melting snowman', 'penguin surfing', 'flying pizza',
+    'sad banana', 'tiny dragon', 'haunted house', 'rubber duck', 'cowboy on horse',
+];
+
+// Random category hints to steer variety
+const PROMPT_CATEGORIES = [
+    'funny animal', 'food gone wrong', 'famous character', 'silly situation',
+    'nature scene', 'everyday object', 'spooky thing', 'fantasy creature',
+    'person doing something absurd', 'vehicle or transport',
+];
+
+async function generatePrompt() {
+    const avoid = state.previousPrompts.length > 0
+        ? `\nDo NOT use any of these: ${state.previousPrompts.join(', ')}.` : '';
+    const category = PROMPT_CATEGORIES[Math.floor(Math.random() * PROMPT_CATEGORIES.length)];
+
+    try {
+        const text = await chatCompletion(MODELS.judge, [
+            { role: 'system', content: `You generate drawing prompts for a game. Category: "${category}". Give ONE fun, specific subject (2-4 words) that someone could quickly sketch. It must be a concrete, visible thing — NOT abstract. Output ONLY the subject in lowercase. No "draw", no articles, no quotes, no punctuation.${avoid}` },
+            { role: 'user', content: 'Go!' },
+            { role: 'assistant', content: 'angry cat wearing hat' },
+            { role: 'user', content: 'Another!' },
+            { role: 'assistant', content: 'penguin on surfboard' },
+            { role: 'user', content: 'Another!' },
+        ], { maxTokens: 15, temperature: 1.0 });
+
+        const cleaned = text.replace(/["""'']/g, '').replace(/\.$/, '').replace(/^draw\s+/i, '').replace(/^an?\s+/i, '').trim().toLowerCase();
+        if (cleaned && cleaned.length > 2 && cleaned.length < 40) return cleaned;
+    } catch (e) {
+        console.warn('Prompt generation failed:', e);
+    }
+    // Fallback
+    const available = PROMPT_FALLBACKS.filter(p => !state.previousPrompts.includes(p));
+    return available.length > 0
+        ? available[Math.floor(Math.random() * available.length)]
+        : PROMPT_FALLBACKS[Math.floor(Math.random() * PROMPT_FALLBACKS.length)];
+}
+
+async function generatePromptFresh() {
+    state.prompt = await generatePrompt();
+    state.previousPrompts.push(state.prompt);
+}
+
+async function rerollPrompt() {
+    $('rerollBtn').disabled = true;
+    const display = $('promptDisplay');
+    display.innerHTML = '<span style="color:var(--text3);font-size:0.9rem">Generating prompt...</span>';
+    display.classList.add('loading');
+
+    state.prompt = '';
+    state.prefetchedAudio = null;
+    await generatePromptFresh();
+
+    display.classList.remove('loading');
+    display.textContent = state.prompt;
+    $('rerollBtn').disabled = false;
+
+    // Generate a fresh reroll comment via LLM
+    try {
+        const welcome = await chatCompletion(MODELS.judge, [
+            { role: 'system', content: `You are a playful game host. The player just picked a new drawing prompt: "${state.prompt}". Say ONE short, fun sentence (under 15 words) reacting to this prompt. Be varied and creative — tease, encourage, joke, or express excitement. Do NOT repeat patterns.` },
+            { role: 'user', content: 'Prompt: "angry cat"' },
+            { role: 'assistant', content: 'Oh this is going to be fun — show me those claws!' },
+            { role: 'user', content: 'Prompt: "pirate ship"' },
+            { role: 'assistant', content: 'Arrr, let\'s see if your ship actually floats.' },
+            { role: 'user', content: `Prompt: "${state.prompt}"` },
+        ], { maxTokens: 30, temperature: 1.0 });
+        $('promptNarrator').textContent = welcome;
+        narrateAsync(welcome);
+    } catch (e) {
+        const fallback = `${state.prompt}! Let's see what you can do with that one.`;
+        $('promptNarrator').textContent = fallback;
+        narrateAsync(fallback);
+    }
+}
+
+function renderPipeline(container) {
+    const { guessers, drawers } = getRequiredModels(5);
+    const line = '<div class="pipe-line"></div>';
+    let html = '';
+
+    let fadeIdx = 0;
+    const sub = (name) => `<span class="pipe-sub">${shortName(name)}</span>`;
+    const grp = (p) => `<span class="pipe-group-title">${p.title}</span><div class="pipe-subs">${p.subs}</div>`;
+
+    // Announcer — full width
+    html += `<div class="pipe-group pipe-fade" style="width:100%;animation-delay:${(fadeIdx++) * 1}s">
+        <span class="pipe-group-title">Announcer</span>
+        <div class="pipe-subs">${sub(MODELS.announcer)}${sub(MODELS.tts)}</div>
+    </div>`;
+    const judgeDelay = fadeIdx * 1;
+    html += `<div class="pipe-line pipe-fade" style="animation-delay:${judgeDelay}s"></div>`;
+    // Judge — full width (same delay as connector above)
+    html += `<div class="pipe-group pipe-fade" style="width:100%;animation-delay:${judgeDelay}s">
+        <span class="pipe-group-title">Judge</span>
+        <div class="pipe-subs">${sub(MODELS.judge)}</div>
+    </div>`;
+    fadeIdx++;
+
+    // Build player list: You, AI1, AI2, AI3, AI4, AI5
+    const players = [];
+    let playerNum = 1;
+    players.push({ title: '🖊️ You', subs: '<span class="pipe-sub">Your Brain</span>' });
+    for (let i = 0; i < guessers.length; i++) {
+        players.push({ title: `🧐 AI ${playerNum++}`, subs: sub(guessers[i]) });
+        if (i < drawers.length) {
+            players.push({ title: `🎨 AI ${playerNum++}`, subs: sub(drawers[i]) });
+        }
+    }
+
+    const rowDelay = () => fadeIdx * 1;
+    const hconn = '<div class="pipe-row-conn"></div>';
+
+    // Render rows of 2, always left-to-right
+    for (let r = 0; r < players.length; r += 2) {
+        const a = players[r];
+        const b = players[r + 1];
+        const rowIdx = r / 2;
+        const delay = rowDelay();
+        fadeIdx++;
+
+        // Diagonal or spacer: same delay as the row so they appear together
+        if (rowIdx > 0) {
+            html += `<svg class="pipe-diag pipe-fade" preserveAspectRatio="none" style="animation-delay:${delay}s"><line x1="56%" y1="0" x2="44%" y2="100%"/></svg>`;
+        } else {
+            html += '<div style="height:6px"></div>';
+        }
+
+        if (b) {
+            html += `<div class="pipe-row pipe-fade" style="animation-delay:${delay}s">
+                <div class="pipe-group">${grp(a)}</div>
+                ${hconn}
+                <div class="pipe-group">${grp(b)}</div>
+            </div>`;
+        } else {
+            html += `<div class="pipe-group pipe-fade" style="width:100%;animation-delay:${delay}s">${grp(a)}</div>`;
+        }
+    }
+
+    container.innerHTML = html;
+}
+
+// ================================================================
+// DRAWING SCREEN
+// ================================================================
+let canvasCtx;
+
+function goToDrawing() {
+    show('screen-draw');
+    $('drawPromptText').textContent = `draw: ${state.prompt}`;
+    initCanvas();
+
+    // Gentle tease while drawing — LLM generated
+    (async () => {
+        try {
+            const tease = await chatCompletion(MODELS.judge, [
+                { role: 'system', content: `The player is about to draw "${state.prompt}". Give a short, playful tease (under 15 words) gently roasting their upcoming drawing attempt. Be funny and specific to the subject.` },
+                { role: 'user', content: '"big bird"' },
+                { role: 'assistant', content: 'If your big bird looks like a yellow blob, this is going to be chaos.' },
+                { role: 'user', content: '"pirate ship"' },
+                { role: 'assistant', content: 'Let\'s hope your ship has more than two lines and a flag.' },
+                { role: 'user', content: `"${state.prompt}"` },
+            ], { maxTokens: 30, temperature: 1.0 });
+            narrateAsync(tease);
+        } catch (e) {
+            narrateAsync(`Hope your ${state.prompt} is recognizable, because these AIs are not the sharpest.`);
+        }
+    })();
+}
+
+function initCanvas() {
+    const canvas = $('drawCanvas');
+    canvasCtx = canvas.getContext('2d');
+
+    // Fill white background
+    canvasCtx.fillStyle = '#ffffff';
+    canvasCtx.fillRect(0, 0, 512, 512);
+    canvasCtx.lineCap = 'round';
+    canvasCtx.lineJoin = 'round';
+
+    // Remove old listeners by cloning
+    const newCanvas = canvas.cloneNode(true);
+    canvas.parentNode.replaceChild(newCanvas, canvas);
+    canvasCtx = newCanvas.getContext('2d');
+    canvasCtx.fillStyle = '#ffffff';
+    canvasCtx.fillRect(0, 0, 512, 512);
+    canvasCtx.lineCap = 'round';
+    canvasCtx.lineJoin = 'round';
+
+    // Mouse events
+    newCanvas.addEventListener('mousedown', canvasStart);
+    newCanvas.addEventListener('mousemove', canvasDraw);
+    newCanvas.addEventListener('mouseup', canvasEnd);
+    newCanvas.addEventListener('mouseleave', canvasEnd);
+
+    // Touch events
+    newCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); canvasStart(e); }, { passive: false });
+    newCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); canvasDraw(e); }, { passive: false });
+    newCanvas.addEventListener('touchend', (e) => { e.preventDefault(); canvasEnd(e); }, { passive: false });
+    newCanvas.addEventListener('touchcancel', (e) => { e.preventDefault(); canvasEnd(e); }, { passive: false });
+}
+
+function canvasCoords(e) {
+    const canvas = document.querySelector('#drawCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const sx = 512 / rect.width, sy = 512 / rect.height;
+    const t = e.touches ? e.touches[0] : e;
+    return { x: (t.clientX - rect.left) * sx, y: (t.clientY - rect.top) * sy };
+}
+
+function canvasStart(e) {
+    state.drawing = true;
+    const { x, y } = canvasCoords(e);
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(x, y);
+}
+
+function canvasDraw(e) {
+    if (!state.drawing) return;
+    const { x, y } = canvasCoords(e);
+    canvasCtx.strokeStyle = state.canvasColor;
+    canvasCtx.lineWidth = state.canvasBrushSize;
+    canvasCtx.lineTo(x, y);
+    canvasCtx.stroke();
+}
+
+function canvasEnd() { state.drawing = false; }
+
+function setColor(btn) {
+    state.canvasColor = btn.dataset.color;
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+
+
+function clearCanvas() {
+    canvasCtx.fillStyle = '#ffffff';
+    canvasCtx.fillRect(0, 0, 512, 512);
+}
+
+function submitDrawing() {
+    const canvas = document.querySelector('#drawCanvas');
+    state.humanImage = canvas.toDataURL('image/png');
+    startGame();
+}
+
+// ================================================================
+// GAME LOGIC
+// ================================================================
+async function startGame() {
+    show('screen-game');
+    state.turns = [];
+    state.gameRunning = true;
+
+    // Flush TTS queue so drawing-screen speech doesn't bleed into gameplay
+    _ttsQueue = Promise.resolve();
+    let _lastSpeechPromise = null; // Track the last announcer speech
+
+    $('turnsWrap').innerHTML = '';
+
+    const { guessers, drawers } = getRequiredModels(state.playerCount);
+    let currentImage = state.humanImage; // Start with human drawing
+
+    // Show human drawing as first card
+    addTurnCard('human', 'Human', 'Your Drawing', currentImage, null, null);
+
+    // Interleave: guesser, drawer, guesser, drawer, guesser...
+    let playerNum = 1;
+    for (let i = 0; i < guessers.length; i++) {
+        if (!state.gameRunning) break;
+
+        // ---- GUESSER TURN ----
+        const vlm = guessers[i];
+        const guesserNum = playerNum++;
+        const guessCard = addTurnCard('guessing', vlm, `🧐 AI ${guesserNum}`, currentImage, null, null);
+
+        await setNarrator(`${tinyName(vlm)} is studying the image...`);
+
+        let guess = '';
+        try {
+            guess = await chatCompletion(vlm, [
+                { role: 'user', content: [
+                    { type: 'image_url', image_url: { url: currentImage } },
+                    { type: 'text', text: 'This is a rough sketch drawn quickly with markers in under 30 seconds. What is it a picture of? Answer with ONLY the subject in 2-5 words. No explanation.' }
+                ] }
+            ], { maxTokens: 30, temperature: 0.3 });
+        } catch (e) {
+            console.error(`Guess failed for ${vlm}:`, e);
+            guess = 'unknown drawing';
+        }
+
+        // Clean up guess
+        guess = guess.replace(/["""'']/g, '').replace(/^(this is |it is |it's |the image shows |the drawing shows |this looks like |i see )/i, '').replace(/\.+$/, '').trim().toLowerCase();
+        if (!guess) guess = 'unknown';
+
+        // Score it via LLM
+        const scorePct = await scoreGuess(state.prompt, guess);
+        console.log(`[Score] "${state.prompt}" vs "${guess}": ${scorePct}%`);
+
+        // Update card
+        updateTurnCard(guessCard, 'guess', vlm, `🧐 AI ${guesserNum}`, currentImage, guess, scorePct);
+        state.turns.push({ type: 'guess', model: vlm, role: `🧐 AI ${guesserNum}`, image: currentImage, guess, score: scorePct });
+
+        // Speech for first guess only — LLM-generated reaction
+        if (i === 0) {
+            _lastSpeechPromise = (async () => {
+                try {
+                    const reaction = await chatCompletion(MODELS.announcer, [
+                        { role: 'system', content: 'You are the announcer for SketchBot. A human drew something and an AI guessed what it is. React to the AI\'s GUESS (not the original subject). 2 sentences max, ~20 words. Be funny.' },
+                        { role: 'user', content: 'The human drew "cat". The AI guessed "a dog" (25% match).' },
+                        { role: 'assistant', content: 'A dog? Really? They both have four legs, but come on. This is not going well.' },
+                        { role: 'user', content: 'The human drew "eiffel tower". The AI guessed "a tall building" (55% match).' },
+                        { role: 'assistant', content: 'A tall building — close enough honestly. Let\'s see if the next AI can narrow it down.' },
+                        { role: 'user', content: 'The human drew "pizza". The AI guessed "pizza" (95% match).' },
+                        { role: 'assistant', content: 'Pizza! Nailed it on the first try. I\'m genuinely impressed, that never happens.' },
+                        { role: 'user', content: `The human drew "${state.prompt}". The AI guessed "${guess}" (${scorePct}% match).` }
+                    ], { temperature: 0.8 });
+                    await textToSpeech(reaction);
+                } catch (e) {
+                    await textToSpeech(`${tinyName(vlm)} thinks it's "${guess}". Interesting.`).catch(() => {});
+                }
+            })();
+        }
+
+        // ---- DRAWER TURN ----
+        if (i < drawers.length && state.gameRunning) {
+            const sd = drawers[i];
+            const drawerNum = playerNum++;
+            const drawCard = addTurnCard('drawing', sd, `🎨 AI ${drawerNum}`, null, null, null);
+
+            await setNarrator(`${tinyName(sd)} is painting...`);
+
+            // Build image prompt: subject + fixed marker sketch style suffix
+            // (PromptBridge is too small to reliably rewrite prompts, so we use a template)
+            const enhancedPrompt = `${guess}, crude marker sketch on white paper, thick wobbly lines, childlike doodle, no shading, flat colors`;
+
+            // Generate image
+            console.log(`[SketchBot] Image prompt for ${sd}:`, enhancedPrompt);
+            let b64 = null;
+            try {
+                b64 = await imageGeneration(sd, enhancedPrompt);
+            } catch (e) { console.error(`Image gen failed for ${sd}:`, e); }
+
+            const newImage = b64 ? `data:image/png;base64,${b64}` : currentImage;
+            updateTurnCard(drawCard, 'draw', sd, `🎨 AI ${drawerNum}`, newImage, null, null, enhancedPrompt);
+            state.turns.push({ type: 'draw', model: sd, role: `🎨 AI ${drawerNum}`, image: newImage, enhancedPrompt });
+
+            currentImage = newImage;
+
+            // No announcer narration for drawing turns
+        }
+    }
+
+    // ---- GAME OVER ----
+    state.gameRunning = false;
+    // Wait for any in-flight announcer speech to finish + 1s pause
+    if (_lastSpeechPromise) {
+        await _lastSpeechPromise.catch(() => {});
+        await new Promise(r => setTimeout(r, 1000));
+    }
+    await showFinalScore();
+}
+
+function addTurnCard(type, model, role, image, guess, score) {
+    const wrap = $('turnsWrap');
+    const card = document.createElement('div');
+    card.className = 'turn-card';
+
+    if (type === 'human') {
+        card.innerHTML = `
+            <div class="turn-head"><span class="turn-role">Your Drawing</span></div>
+            <div class="turn-image"><img src="${image}" alt="Your drawing"></div>`;
+    } else if (type === 'guessing') {
+        card.innerHTML = `
+            <div class="turn-head"><span class="turn-role">${shortName(model)} guesses</span></div>
+            <div class="turn-status">Studying the image...</div>`;
+    } else if (type === 'drawing') {
+        card.innerHTML = `
+            <div class="turn-head"><span class="turn-role">${shortName(model)} draws</span></div>
+            <div class="turn-status">Generating image...</div>`;
+    }
+
+    wrap.appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return card;
+}
+
+function updateTurnCard(card, type, model, role, image, guess, score, enhancedPrompt) {
+    let html = '';
+
+    if (type === 'guess') {
+        // Horizontal layout: left body (heading + guess), right score
+        html += `<div class="turn-card-row">
+            <div class="turn-card-body">
+                <div class="turn-head"><span class="turn-role">${shortName(model)} guesses</span></div>
+                ${guess ? `<div class="turn-guess"><div class="guess-text">"${escapeHtml(guess)}"</div></div>` : ''}
+            </div>
+            ${score !== null && score !== undefined ? `<div class="turn-score ${scoreClass(score)}">${score}%</div>` : ''}
+        </div>`;
+    } else if (type === 'draw') {
+        html += `<div class="turn-head"><span class="turn-role">${shortName(model)} drew</span></div>`;
+        if (image) {
+            html += `<div class="turn-image"><img src="${image}" alt="${shortName(model)}"></div>`;
+        }
+    }
+
+    card.innerHTML = html;
+    card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function shortName(id) {
+    return id.replace(/-GGUF$/i, '').replace(/-Instruct/i, '').replace(/-Alpha/i, '');
+}
+
+// Ultra-short names for announcer narration
+function tinyName(id) {
+    const s = shortName(id).toLowerCase();
+    if (s.includes('qwen3') && s.includes('vl') && s.includes('4b')) return 'Qwen3';
+    if (s.includes('qwen2') || s.includes('qwen2.5')) return 'Qwen2';
+    if (s.includes('gemma')) return 'Gemma3';
+    return shortName(id);
+}
+
+async function setNarrator(text) {
+    $('gameNarrator').textContent = text;
+}
+
+// TTS queue: each announcement waits for the previous one + 1s pause
+let _ttsQueue = Promise.resolve();
+function queueTTS(text) {
+    _ttsQueue = _ttsQueue.then(async () => {
+        await textToSpeech(text);
+        await new Promise(r => setTimeout(r, 1000));
+    }).catch(() => {});
+}
+
+async function narrateAndSpeak(text) {
+    $('gameNarrator').textContent = text;
+    await textToSpeech(text);
+}
+
+function narrateAsync(text) {
+    $('gameNarrator').textContent = text;
+    queueTTS(text);
+}
+
+function toggleMute() {
+    state.muted = !state.muted;
+    $('muteBtn').textContent = state.muted ? '🔇' : '🔊';
+    $('muteBtn').classList.toggle('muted', state.muted);
+}
+
+// ================================================================
+// FINAL SCORE (inline in gameplay screen)
+// ================================================================
+async function showFinalScore() {
+    const wrap = $('turnsWrap');
+
+    // Get the last guess
+    const guessTurns = state.turns.filter(t => t.type === 'guess');
+    const lastGuess = guessTurns[guessTurns.length - 1];
+    const finalScore = lastGuess?.score ?? 0;
+    const finalGuess = lastGuess?.guess ?? '???';
+
+    const cls = finalScore >= 65 ? 'great' : finalScore >= 35 ? 'ok' : 'bad';
+    const title = finalScore >= 65 ? 'Great Job!' : finalScore >= 35 ? 'Not Bad...' : 'Total Chaos!';
+
+    // Append finale banner into the gameplay turns
+    const finaleCard = document.createElement('div');
+    finaleCard.className = 'score-banner ' + cls;
+    finaleCard.innerHTML = `
+        <h2>${title}</h2>
+        <div class="score-transform">"${escapeHtml(state.prompt)}" → "${escapeHtml(finalGuess)}"</div>
+        <div class="score-commentary" id="scoreCommentary"></div>`;
+    wrap.appendChild(finaleCard);
+    finaleCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+    // Generate announcer finale in background (doesn't block)
+    (async () => {
+        // Hardcoded spoken intro about the score
+        const scoreReact = finalScore >= 75 ? `Wow, ${finalScore}%!`
+            : finalScore >= 50 ? `${finalScore}%, not bad!`
+            : finalScore >= 25 ? `Only ${finalScore}%?`
+            : `Oh no, ${finalScore}%.`;
+        const spokenIntro = `${scoreReact} We went from "${state.prompt}" to "${finalGuess}".`;
+
+        // LLM generates just the joke
+        let joke = '';
+        try {
+            joke = await chatCompletion(MODELS.announcer, [
+            { role: 'system', content: 'A drawing game turned one thing into another. Write ONE punchy joke about this transformation. Rules: do NOT repeat the words, do NOT explain the connection, just be funny. Max 10 words.' },
+            { role: 'user', content: '"cat" became "a dog"' },
+            { role: 'assistant', content: 'To be fair, they both have questionable hygiene.' },
+            { role: 'user', content: '"eiffel tower" became "a rocket"' },
+            { role: 'assistant', content: 'At least it\'s still pointing up!' },
+            { role: 'user', content: '"pizza" became "the sun"' },
+            { role: 'assistant', content: 'Both are round, hot, and the center of my universe.' },
+            { role: 'user', content: `"${state.prompt}" became "${finalGuess}"` }
+        ], { temperature: 0.9 });
+        } catch (e) {
+            joke = `I guess "${state.prompt}" and "${finalGuess}" are basically the same thing if you close your eyes.`;
+        }
+
+        // Print only the joke on screen
+        const el = document.getElementById('scoreCommentary');
+        if (el) el.textContent = joke;
+
+        // Speak the full thing: score reaction + joke
+        narrateAsync(`${spokenIntro} ${joke}`);
+    })();
+
+    // Append Play Again button
+    const btnCard = document.createElement('div');
+    btnCard.style.cssText = 'text-align:center; padding:1rem 0;';
+    btnCard.innerHTML = `<button class="btn btn-primary" onclick="playAgain()">Play Again</button>`;
+    wrap.appendChild(btnCard);
+    // Scroll the turns-wrap container to the very bottom
+    setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 150);
+}
+
+function playAgain() {
+    state.turns = [];
+    state.humanImage = null;
+    state.prompt = '';
+    state.prefetchPromise = null;
+    state.prefetchedAudio = null;
+    state.prefetchedWelcome = '';
+    $('promptNarrator').textContent = '';
+    goToPrompt();
+}
+
+// ================================================================
+// INIT
+// ================================================================
+initSetup();
+</script>
+</body>
+</html>
