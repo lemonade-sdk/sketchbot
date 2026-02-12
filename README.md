@@ -4,6 +4,8 @@ SketchBot is a game of telephone pictionary with 100% local AI! The player recei
 
 Delightfully narrated by an LLM with a synthetic voice and judged by yet another LLM.
 
+Discuss on Discord: https://discord.gg/5xXzkMu8Zk
+
 | Prompt | Drawing | Finale |
 |--------|---------|--------|
 | ![Prompt](img/prompt_screen.png) | ![Drawing](img/drawing_screen.png) | ![Finale](img/finale_screen.png) |
