@@ -425,6 +425,7 @@
 // CONFIGURATION
 // ================================================================
 const SERVER = 'http://localhost:8000';
+const MIN_LEMONADE_VERSION = '9.3.2';
 
 // Model roles
 const MODELS = {
@@ -440,6 +441,7 @@ const MODELS = {
 // ================================================================
 const state = {
     maxModelSlots: 1,
+    lemonadeVersion: null,
     playerCount: 5,
     prompt: '',
     previousPrompts: [],
@@ -472,6 +474,52 @@ function show(screenId) {
     $(screenId).classList.add('active');
 }
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function extractLemonadeVersion(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const directCandidates = [
+        obj.version,
+        obj.server_version,
+        obj.lemonade_version,
+        obj.lemonadeVersion,
+        obj.app_version,
+    ];
+    for (const candidate of directCandidates) {
+        const normalized = normalizeVersion(candidate);
+        if (normalized) return normalized;
+    }
+    for (const value of Object.values(obj)) {
+        if (value && typeof value === 'object') {
+            const nested = extractLemonadeVersion(value);
+            if (nested) return nested;
+        }
+    }
+    return null;
+}
+
+function normalizeVersion(value) {
+    if (value === null || value === undefined) return null;
+    const m = String(value).match(/\d+\.\d+\.\d+(?:\.\d+)?/);
+    return m ? m[0] : null;
+}
+
+function compareSemver(a, b) {
+    const left = a.split('.').map(n => parseInt(n, 10));
+    const right = b.split('.').map(n => parseInt(n, 10));
+    const len = Math.max(left.length, right.length);
+    for (let i = 0; i < len; i++) {
+        const l = left[i] || 0;
+        const r = right[i] || 0;
+        if (l > r) return 1;
+        if (l < r) return -1;
+    }
+    return 0;
+}
+
+function isSupportedLemonadeVersion(version) {
+    if (!version) return false;
+    return compareSemver(version, MIN_LEMONADE_VERSION) >= 0;
+}
 
 async function scoreGuess(original, guess) {
     // Use the judge LLM (larger model) to score how close the guess is to the original
@@ -577,6 +625,7 @@ async function apiPost(path, body) {
 
 async function checkHealth() {
     const d = await apiGet('/api/v1/health');
+    state.lemonadeVersion = extractLemonadeVersion(d) || state.lemonadeVersion;
     state.maxModelSlots = d.max_models?.llm ?? 1; // single N applies to all type slots
     const loaded = d.all_models_loaded || [];
     loaded.forEach(m => state.loadedModels.add(m.model_name));
@@ -584,7 +633,9 @@ async function checkHealth() {
 }
 
 async function checkSystemInfo() {
-    return apiGet('/api/v1/system-info');
+    const d = await apiGet('/api/v1/system-info');
+    state.lemonadeVersion = extractLemonadeVersion(d) || state.lemonadeVersion;
+    return d;
 }
 
 async function fetchModelsInfo() {
@@ -701,10 +752,21 @@ async function initSetup() {
     // 2. System info
     try { await checkSystemInfo(); } catch (e) { console.warn('System info failed:', e); }
 
-    // 3. Fetch models catalog
+    // 3. Check server version requirement
+    if (!isSupportedLemonadeVersion(state.lemonadeVersion)) {
+        const found = state.lemonadeVersion ? `Detected version: ${state.lemonadeVersion}.` : 'Could not determine Lemonade version.';
+        statusEl.innerHTML = `<span style="color:var(--red)">Lemonade Server ${MIN_LEMONADE_VERSION}+ is required.</span>`;
+        warningEl.innerHTML = `<div class="setup-warning">${found}<br>Please update Lemonade Server and restart setup.</div>`;
+        actionsEl.innerHTML = `
+            <button class="btn btn-primary" onclick="initSetup()">Retry</button>
+            <button class="btn btn-secondary" onclick="$('helpPopup').style.display='flex'">Help</button>`;
+        return;
+    }
+
+    // 4. Fetch models catalog
     try { await fetchModelsInfo(); } catch (e) { console.warn('Models fetch failed:', e); }
 
-    // 4. Check slot requirements
+    // 5. Check slot requirements
     const needed = getNeededMaxModels(5); // Check for max player count
     const slotsOk = state.maxModelSlots >= needed;
 
@@ -715,7 +777,7 @@ async function initSetup() {
         </div>`;
     }
 
-    // 5. Show models list and summarize download state
+    // 6. Show models list and summarize download state
     const { all } = getRequiredModels(5);
     const toDownload = all.filter(id => !(state.modelsInfo[id]?.downloaded));
     renderSetupModels();
