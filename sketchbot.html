@@ -625,7 +625,7 @@ async function apiPost(path, body) {
 
 async function checkHealth() {
     const d = await apiGet('/api/v1/health');
-    state.lemonadeVersion = extractLemonadeVersion(d) || state.lemonadeVersion;
+    state.lemonadeVersion = normalizeVersion(d.version) || extractLemonadeVersion(d) || state.lemonadeVersion;
     state.maxModelSlots = d.max_models?.llm ?? 1; // single N applies to all type slots
     const loaded = d.all_models_loaded || [];
     loaded.forEach(m => state.loadedModels.add(m.model_name));
@@ -634,7 +634,6 @@ async function checkHealth() {
 
 async function checkSystemInfo() {
     const d = await apiGet('/api/v1/system-info');
-    state.lemonadeVersion = extractLemonadeVersion(d) || state.lemonadeVersion;
     return d;
 }
 
